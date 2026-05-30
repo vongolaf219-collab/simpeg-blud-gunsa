@@ -638,6 +638,93 @@
         .catch(err => tampilkanNotifikasi("Gagal absen", "danger"));
     }
 
+    function renderProfil() {
+      let h = '<div class="container-fluid pt-2 pb-4"><div class="row justify-content-center"><div class="col-md-8 col-lg-6"><div class="card profile-card shadow-sm border-0"><div class="profile-header-bg"></div><div class="card-body text-center pt-0"><div class="profile-img-container mb-3"><img src="' + (currentUser.foto || 'https://via.placeholder.com/150') + '" id="img-profil" class="profile-img-preview"><label for="upload-foto" class="btn-edit-photo"><i class="fas fa-camera"></i></label><input type="file" id="upload-foto" style="display:none" accept="image/*" onchange="previewDanUploadFoto(this)"></div><h4 class="fw-bold mb-1 text-dark">' + currentUser.nama + '</h4><p class="text-muted mb-4">' + currentUser.jabatan + ' | ' + currentUser.unitKerja + '</p><div class="text-start"><div class="mb-3"><label class="form-label small fw-bold text-muted">NIP / Username</label><input type="text" class="form-control bg-light" value="' + currentUser.nip + '" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Nama Lengkap</label><input type="text" id="edit-nama" class="form-control" value="' + currentUser.nama + '"></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Jabatan</label><input type="text" id="edit-jabatan" class="form-control" value="' + currentUser.jabatan + '"></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Unit Kerja</label><input type="text" id="edit-unit" class="form-control" value="' + currentUser.unitKerja + '"></div><div class="mb-4"><label class="form-label small fw-bold text-muted">Password Baru</label><input type="password" id="edit-pass" class="form-control" placeholder="******"></div><button class="btn btn-success w-100 rounded-pill py-3 fw-bold shadow-sm" onclick="updateProfilPegawai(this)"><i class="fas fa-save me-2"></i> SIMPAN PERUBAHAN</button></div></div></div></div></div></div>';
+      document.getElementById('content-area').innerHTML = h;
+    }
+
+    // Fungsi untuk compress gambar (resize) sebelum dikirim
+    function previewDanUploadFoto(input) {
+      if (input.files && input.files[0]) {
+        const file = input.files[0]; 
+        const reader = new FileReader(); 
+        document.getElementById('img-profil').style.opacity = '0.5';
+        
+        reader.onload = function(e) {
+          const img = new Image(); 
+          img.onload = function() {
+            const canvas = document.createElement('canvas'); 
+            const MAX_WIDTH = 250; 
+            const MAX_HEIGHT = 250; 
+            let width = img.width; 
+            let height = img.height;
+            
+            if (width > height) { 
+              if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } 
+            } else { 
+              if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } 
+            }
+            
+            canvas.width = width; canvas.height = height; 
+            const ctx = canvas.getContext('2d'); 
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); 
+            const imgProfil = document.getElementById('img-profil');
+            imgProfil.src = compressedDataUrl; 
+            imgProfil.style.opacity = '1'; 
+            currentUser.tempFoto = compressedDataUrl; 
+          }; 
+          img.src = e.target.result;
+        }; 
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Fungsi Simpan Profil menggunakan API fetch
+    function updateProfilPegawai(btn) { 
+      const data = { 
+        nip: currentUser.nip, 
+        nama: document.getElementById('edit-nama').value, 
+        jabatan: document.getElementById('edit-jabatan').value, 
+        unit: document.getElementById('edit-unit').value, 
+        pass: document.getElementById('edit-pass').value, 
+        foto: currentUser.tempFoto || currentUser.foto 
+      };
+      
+      btn.disabled = true; 
+      const originalText = btn.innerHTML; 
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...';
+      
+      // Memanggil fungsi updateUserProfil di Backend (Code.gs)
+      apiCall('updateUserProfil', { obj: data })
+        .then(function(res) { 
+          if (res === "Sukses") { 
+            tampilkanNotifikasi("Profil berhasil diperbarui!", "success"); 
+            
+            // Update data session lokal agar tidak hilang saat di-refresh
+            currentUser.nama = data.nama; 
+            currentUser.jabatan = data.jabatan; 
+            currentUser.unitKerja = data.unit; 
+            if(data.foto) currentUser.foto = data.foto; 
+            
+            localStorage.setItem('sim_blud_session', JSON.stringify(currentUser));
+            
+            showMainApp(); 
+            renderProfil(); 
+          } else { 
+            tampilkanNotifikasi("Gagal memperbarui profil: " + res, "danger"); 
+            btn.disabled = false; 
+            btn.innerHTML = originalText; 
+          } 
+        })
+        .catch(function(err) { 
+          tampilkanNotifikasi("Terjadi kesalahan server saat menyimpan profil.", "danger"); 
+          btn.disabled = false; 
+          btn.innerHTML = originalText; 
+        });
+    }
+
     // --- CETAK PDF ---
     function downloadPDF() {
       const btn = document.getElementById('btnCetakPDF'); const textAsli = btn.innerHTML; 
