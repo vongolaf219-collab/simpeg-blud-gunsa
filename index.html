@@ -995,6 +995,39 @@
     // =======================================================================
     // --- CETAK PDF (DINAMIS SESUAI FILTER) ---
     // =======================================================================
+    function downloadPDF() {
+      // 1. Validasi user
+      if (!currentUser || !currentUser.nip) {
+        tampilkanNotifikasi("Sesi Anda tidak valid. Silakan login kembali.", "danger");
+        return;
+      }
+
+      const btn = document.getElementById('btnCetakPDF'); 
+      const textAsli = btn.innerHTML; 
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Memproses...'; 
+      btn.disabled = true;
+
+      // 2. Ambil filter
+      const bln = document.getElementById('filterLKH_Bulan').value;
+      const thn = document.getElementById('filterLKH_Tahun').value;
+
+      // 3. Kirim SATU objek payload saja
+      const payload = { 
+        userData: currentUser, 
+        bulan: bln, 
+        tahun: thn,
+        dataFilter: window.currentLKHData 
+      };
+
+      apiCall('exportPDFLKH', payload)
+        .then(function(base64Data) { 
+          tampilkanPreviewPDF(base64Data, 'LKH_' + currentUser.nama + '.pdf'); 
+        })
+        .catch(function(err) { 
+          tampilkanNotifikasi("Gagal memproses PDF: " + err.message, "danger"); 
+        })
+        .finally(function() { btn.innerHTML = textAsli; btn.disabled = false; });
+    }
     function downloadPDFRekap() {
       const btn = document.getElementById('btnCetakRekap'); 
       const originalText = btn.innerHTML; 
