@@ -13,7 +13,6 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #f0f4f2; margin: 0; overflow-x: hidden; }
 
-    /* CSS Sama Persis Dengan Sebelumnya (Diringkas agar rapi) */
     #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s ease; background: url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2000&auto=format&fit=crop') center center/cover no-repeat; }
     #splash-screen::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(25, 135, 84, 0.85); z-index: 1; }
     .splash-content { text-align: center; color: white; z-index: 2; }
@@ -184,6 +183,32 @@
     </div>
   </div>
 
+  <div class="modal fade" id="modalPegawai" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-user-plus me-2"></i>Tambah Pegawai</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label small fw-bold">NIP / Username</label><input type="text" class="form-control" id="p_nip" required></div>
+          <div class="mb-3"><label class="form-label small fw-bold">Nama Lengkap</label><input type="text" class="form-control" id="p_nama" required></div>
+          <div class="mb-3"><label class="form-label small fw-bold">Password Awal</label><input type="text" class="form-control" id="p_pass" value="123456" required></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label small fw-bold">Role Sistem</label><select class="form-select" id="p_role"><option value="Pegawai">Pegawai</option><option value="Verifikator">Verifikator</option><option value="Admin">Admin</option></select></div>
+            <div class="col-6"><label class="form-label small fw-bold">Jenis Profesi</label><select class="form-select" id="p_jenis_profesi"><option value="Tenaga Medis">Tenaga Medis</option><option value="Non Medis">Non Medis</option></select></div>
+          </div>
+          <div class="mb-3"><label class="form-label small fw-bold">Jabatan</label><input type="text" class="form-control" id="p_jabatan" required></div>
+          <div class="mb-3"><label class="form-label small fw-bold">Unit Kerja</label><input type="text" class="form-control" id="p_unit" required></div>
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-success px-4 fw-bold" onclick="simpanPegawai()"><i class="fas fa-save me-1"></i> Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="modalCustomDialog" tabindex="-1" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content border-0 shadow-lg rounded-4">
@@ -218,17 +243,16 @@
 
   <script>
     // ====================================================================================
-    // KONFIGURASI PENTING: GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA YANG BARU
+    // KONFIGURASI PENTING: URL WEB APP GOOGLE APPS SCRIPT ANDA 
     // ====================================================================================
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwOMymMIE4hk83T2kwtQKM6GbolXbMTZTakVFRqNAz6GZxAkfAXipWPkHv1nEiB8-qw/exec"; 
 
-    // Fungsi Fetch Wrapper Pengganti google.script.run
     async function apiCall(action, params = {}) {
       const payload = { action: action, ...params };
       try {
         const response = await fetch(GAS_API_URL, {
           method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" }, // Hindari CORS
+          headers: { "Content-Type": "text/plain;charset=utf-8" }, 
           body: JSON.stringify(payload)
         });
         const result = await response.json();
@@ -306,7 +330,7 @@
             document.getElementById('login-section').style.display = 'flex'; 
           }
         }, 500); 
-      }, 2000); // Dipercepat jadi 2 detik 
+      }, 2000); 
     };
 
     document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -320,7 +344,6 @@
 
       btn.disabled = true; btnText.style.display = 'none'; loader.style.display = 'block'; errorDiv.style.display = 'none';
       
-      // MENGGUNAKAN API CALL
       apiCall('processLogin', { username: user, password: pass })
         .then(function(response) {
           if (response.success) { 
@@ -357,7 +380,6 @@
         document.getElementById('sidebarProfilePic').innerHTML = '<i class="fas fa-user-md"></i>'; document.getElementById('topProfilePic').innerHTML = '<i class="fas fa-user-circle text-success" style="font-size: 38px;"></i>';
       }
       
-      // TAMPILKAN MENU BERDASARKAN ROLE
       if (currentUser.role === 'Admin') { 
         document.getElementById('mobile-menu-master').style.display = 'block'; 
       } else {
@@ -393,17 +415,43 @@
       }, 300);
     }
 
-    // --- CRUD LKH ---
+    // --- CRUD LKH DENGAN FILTER ---
     function renderDataLKH() {
+      const date = new Date();
+      const currMonth = date.getMonth() + 1;
+      const currYear = date.getFullYear();
+      const bulanList = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+      let h = '<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"><h4 class="fw-bold mb-0 text-dark"><i class="fas fa-file-signature text-success me-2"></i>Data LKH</h4><div><button class="btn btn-primary btn-sm me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalTambahLKH"><i class="fas fa-plus"></i> TAMBAH</button><button class="btn btn-danger btn-sm fw-bold" id="btnCetakPDF" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> CETAK PDF</button></div></div>';
       
-      let h = '<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"><h4 class="fw-bold mb-0 text-dark"><i class="fas fa-file-signature text-success me-2"></i>Data LKH</h4><div><button class="btn btn-primary btn-sm me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalTambahLKH"><i class="fas fa-plus"></i> TAMBAH</button><button class="btn btn-danger btn-sm fw-bold" id="btnCetakPDF" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> CETAK PDF</button></div></div><div class="table-responsive bg-white rounded-3 shadow-sm border border-light"><table class="table table-bordered table-hover table-custom mb-0"><thead class="table-light text-muted"><tr><th>No.</th><th>Hari/Tanggal/Jam</th><th>Rincian Kegiatan</th><th>Hasil Kegiatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tabelDataLKH"><tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-success"></div><br><span class="mt-2 d-block">Memuat data...</span></td></tr></tbody></table></div>';
+      h += '<div class="card border-0 shadow-sm mb-4"><div class="card-body bg-light rounded-3 d-flex gap-2 flex-wrap align-items-center"><span class="fw-bold me-2">Periode:</span>';
+      h += '<select class="form-select form-select-sm w-auto" id="filterLKH_Bulan">';
+      bulanList.forEach((b, i) => { h += `<option value="${i+1}" ${currMonth === i+1 ? 'selected' : ''}>${b}</option>`; });
+      h += '</select>';
+      
+      h += '<select class="form-select form-select-sm w-auto" id="filterLKH_Tahun">';
+      [2024, 2025, 2026].forEach(y => { h += `<option value="${y}" ${currYear === y ? 'selected' : ''}>${y}</option>`; });
+      h += '</select>';
+      
+      h += '<button class="btn btn-primary btn-sm fw-bold" onclick="muatDataLKH()"><i class="fas fa-sync me-1"></i> Tampilkan</button></div></div>';
+
+      h += '<div class="table-responsive bg-white rounded-3 shadow-sm border border-light"><table class="table table-bordered table-hover table-custom mb-0"><thead class="table-light text-muted"><tr><th>No.</th><th>Hari/Tanggal/Jam</th><th>Rincian Kegiatan</th><th>Hasil Kegiatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tabelDataLKH"><tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-success"></div><br><span class="mt-2 d-block">Memuat data...</span></td></tr></tbody></table></div>';
       document.getElementById('content-area').innerHTML = h;
 
-      apiCall('getLKHData', { userNip: currentUser.nip })
+      muatDataLKH();
+    }
+
+    function muatDataLKH() {
+      const tbody = document.getElementById('tabelDataLKH');
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-success"></div><br><span class="mt-2 d-block">Memuat data...</span></td></tr>';
+      
+      const bln = document.getElementById('filterLKH_Bulan').value;
+      const thn = document.getElementById('filterLKH_Tahun').value;
+
+      apiCall('getLKHData', { userNip: currentUser.nip, bulan: bln, tahun: thn })
         .then(function(data) {
           window.currentLKHData = data; 
-          const tbody = document.getElementById('tabelDataLKH');
-          if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Belum ada data LKH.</td></tr>'; return; }
+          if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Belum ada data LKH pada periode ini.</td></tr>'; return; }
           let rows = '';
           data.forEach(function(row, index) {
             let statusBadge = row.status === 'Sudah Diverifikasi' ? '<span class="text-success small fw-bold"><i class="fas fa-check"></i> Sudah Diverifikasi</span>' : '<span class="text-warning small fw-bold">Belum Diverifikasi</span>';
@@ -412,7 +460,7 @@
           }); 
           tbody.innerHTML = rows;
         })
-        .catch(function(err) { document.getElementById('tabelDataLKH').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Gagal memuat data.</td></tr>'; });
+        .catch(function(err) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Gagal memuat data.</td></tr>'; });
     }
 
     document.getElementById('formTambahLKH').addEventListener('submit', function(e) {
@@ -427,7 +475,7 @@
           bootstrap.Modal.getInstance(document.getElementById('modalTambahLKH')).hide(); 
           document.getElementById('formTambahLKH').reset(); 
           tampilkanNotifikasi("LKH berhasil disimpan!", "success");
-          renderDataLKH(); 
+          muatDataLKH(); 
         })
         .catch(function(err) { tampilkanNotifikasi("Gagal menyimpan data.", "danger"); })
         .finally(function() { btnSimpan.innerHTML = teksAsli; btnSimpan.disabled = false; });
@@ -459,7 +507,7 @@
         .then(function(res) { 
           tampilkanNotifikasi(res, "success"); 
           bootstrap.Modal.getInstance(document.getElementById('modalTambahLKH')).hide(); 
-          renderDataLKH(); resetModalForm(); 
+          muatDataLKH(); resetModalForm(); 
         })
         .catch(function(err) { tampilkanNotifikasi("Error: " + err, "danger"); btn.disabled = false; btn.innerText = "UPDATE DATA"; });
     }
@@ -475,7 +523,7 @@
     function hapusLKH(rowIdx) { 
       tampilkanKonfirmasi("Apakah Anda yakin ingin menghapus data LKH ini?", function() {
         apiCall('hapusLKHData', { rowIdx: rowIdx })
-          .then(function(res) { tampilkanNotifikasi(res, "success"); renderDataLKH(); })
+          .then(function(res) { tampilkanNotifikasi(res, "success"); muatDataLKH(); })
           .catch(function(err) { tampilkanNotifikasi("Gagal menghapus.", "danger"); });
       });
     }
@@ -515,164 +563,39 @@
         })
         .catch(function(err) { document.getElementById('tabelDataRekap').innerHTML = '<tr><td colspan="3" class="text-center text-danger py-4">Gagal memuat.</td></tr>'; });
     }
-    // =======================================================================
-    // ADMIN VERIFIKASI LKH (VERSI API)
-    // =======================================================================
-    function renderVerifikasiLKH() {
-      if (currentUser.role !== 'Admin' && currentUser.role !== 'Verifikator') { 
-        document.getElementById('content-area').innerHTML = '<div class="alert alert-danger shadow-sm border-0"><i class="fas fa-exclamation-triangle me-2"></i> <strong>Akses Ditolak!</strong></div>'; 
-        return; 
-      }
 
-      let h = '<h4 class="fw-bold mb-4 text-dark"><i class="fas fa-check-double text-success me-2"></i>Verifikasi LKH Pegawai</h4>';
-      h += '<div class="table-responsive bg-white shadow-sm rounded-4 border border-light">';
-      h += '<table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.85rem;">';
-      h += '<thead class="table-light text-center"><tr><th width="5%">No</th><th width="15%">Nama Pegawai</th><th width="15%">Hari/Tanggal/Jam</th><th>Rincian Kegiatan</th><th>Hasil Kegiatan</th><th width="10%">Aksi</th></tr></thead>';
-      h += '<tbody id="tabelVerifikasi"><tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-success"></div><br>Mencari data...</td></tr></tbody></table></div>';
-      document.getElementById('content-area').innerHTML = h;
-
-      // Panggil Backend menggunakan API
-      apiCall('getPendingLKH', { userRole: currentUser.role, userNama: currentUser.nama })
-        .then(function(data) {
-          const tbody = document.getElementById('tabelVerifikasi');
-          if (!data || data.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Semua LKH sudah diverifikasi.</td></tr>'; 
-            return; 
-          }
-          let rows = ''; 
-          data.forEach((row, index) => { 
-            rows += '<tr><td class="text-center">' + (index + 1) + '</td><td class="fw-bold text-dark">' + row.namaPegawai + '</td><td class="text-center">' + row.tanggal + '<br><span class="badge bg-light text-dark border">' + row.waktu + '</span></td><td>' + row.kegiatan + '</td><td>' + row.hasil + '</td><td class="text-center"><button class="btn btn-success btn-sm fw-bold shadow-sm rounded-pill px-3" onclick="eksekusiVerifikasi(' + row.rowIdx + ', this)"><i class="fas fa-check me-1"></i> Verifikasi</button></td></tr>'; 
-          }); 
-          tbody.innerHTML = rows;
-        })
-        .catch(function(err) {
-          document.getElementById('tabelVerifikasi').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Gagal memuat data verifikasi.</td></tr>';
-        });
-    }
-
-    function eksekusiVerifikasi(rowIdx, btn) { 
-      tampilkanKonfirmasi("Apakah Anda yakin ingin memverifikasi laporan ini?", function() {
-        btn.disabled = true; 
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
-        
-        apiCall('updateStatusVerifikasi', { rowIdx: rowIdx, userRole: currentUser.role, userNama: currentUser.nama })
-          .then(function(res) { 
-            tampilkanNotifikasi(res, "success"); 
-            renderVerifikasiLKH(); 
-          })
-          .catch(function(err) { 
-            tampilkanNotifikasi(err.message || "Gagal verifikasi", "danger"); 
-            renderVerifikasiLKH(); 
-          });
-      });
-    }
-    // =======================================================================
-    // MANAJEMEN PEGAWAI (VERSI API)
-    // =======================================================================
-    function renderPegawai() {
-      let h = '<div class="card border-0 shadow-sm rounded-4"><div class="card-header bg-white py-3 d-flex justify-content-between align-items-center"><h6 class="mb-0 fw-bold text-success"><i class="fas fa-users me-2"></i>Manajemen Data Pegawai</h6><button class="btn btn-success btn-sm rounded-pill fw-bold px-3" onclick="tambahPegawaiBaru()"><i class="fas fa-plus me-1"></i> Tambah Pegawai</button></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.85rem;"><thead class="table-light"><tr><th>No</th><th>NIP</th><th>Nama Pegawai</th><th>Role</th><th>Jabatan</th><th>Unit Kerja</th><th>Jenis Profesi</th></tr></thead><tbody id="tabelPegawai"><tr><td colspan="7" class="py-4"><div class="spinner-border text-success"></div> Memuat data...</td></tr></tbody></table></div></div></div>';
-      document.getElementById('content-area').innerHTML = h;
-      
-      apiCall('getAllPegawai', {})
-        .then(function(data) { 
-          let rows = ''; 
-          data.forEach((p, i) => { 
-            let badgeProfesi = p.jenisProfesi === 'Tenaga Medis' ? 'bg-info text-dark' : 'bg-warning text-dark';
-            rows += '<tr><td>' + (i+1) + '</td><td>' + p.nip + '</td><td class="text-start fw-bold">' + p.nama + '</td><td><span class="badge bg-secondary rounded-pill px-2 py-1">' + p.role + '</span></td><td>' + p.jabatan + '</td><td>' + p.unit + '</td><td><span class="badge ' + badgeProfesi + ' rounded-pill px-2 py-1">' + p.jenisProfesi + '</span></td></tr>'; 
-          }); 
-          document.getElementById('tabelPegawai').innerHTML = rows; 
-        })
-        .catch(err => document.getElementById('tabelPegawai').innerHTML = '<tr><td colspan="7">Gagal memuat data.</td></tr>');
-    }
-
-    function simpanPegawai() {
-      const btn = document.querySelector('#modalPegawai .btn-success');
-      const txtAsli = btn.innerHTML;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...';
-      btn.disabled = true;
-
-      const dataPegawai = {
-        nip: document.getElementById('p_nip').value,
-        pass: document.getElementById('p_pass').value,
-        nama: document.getElementById('p_nama').value,
-        role: document.getElementById('p_role').value,
-        jenisProfesi: document.getElementById('p_jenis_profesi').value,
-        jabatan: document.getElementById('p_jabatan').value,
-        unit: document.getElementById('p_unit').value
-      };
-
-      apiCall('simpanDataPegawai', { data: dataPegawai })
-        .then(function(res) {
-           tampilkanNotifikasi(res, "success");
-           bootstrap.Modal.getInstance(document.getElementById('modalPegawai')).hide();
-           renderPegawai(); 
-        })
-        .catch(function(err) {
-           tampilkanNotifikasi("Gagal menyimpan: " + err.message, "danger");
-           btn.innerHTML = txtAsli; btn.disabled = false;
-        });
-    }
-
-    // =======================================================================
-    // PENGATURAN VERIFIKATOR (VERSI API)
-    // =======================================================================
-    function renderVerifikator() {
-      let h = '<div class="card border-0 shadow-sm rounded-4 overflow-hidden"><div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold text-success"><i class="fas fa-link me-2"></i>Mapping Verifikator Pegawai</h6></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-bordered table-hover align-middle mb-0 table-custom text-center"><thead class="table-light"><tr><th width="5%">No</th><th width="35%">Nama Pegawai (NIP)</th><th width="40%">Pilih Verifikator</th><th width="20%">Aksi</th></tr></thead><tbody id="tabelMappingVerifikator"><tr><td colspan="4" class="py-4"><div class="spinner-border text-success"></div> Memuat Data Master...</td></tr></tbody></table></div></div></div>';
-      document.getElementById('content-area').innerHTML = h;
-
-      apiCall('getDataMasterVerifikator', {})
-        .then(function(data) {
-          const tbody = document.getElementById('tabelMappingVerifikator');
-          if (!data.pegawai || data.pegawai.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-muted py-4">Belum ada data.</td></tr>'; return; }
-          let rows = '';
-          data.pegawai.forEach((pegawai, index) => {
-            let options = '<option value="-">-- Belum Ada Verifikator --</option>'; 
-            data.verifikator.forEach(v => { let selected = (v === pegawai.verifikator) ? 'selected' : ''; options += '<option value="' + v + '" ' + selected + '>' + v + '</option>'; });
-            let safeNip = pegawai.nip.replace(/\s+/g, ''); 
-            rows += '<tr><td>' + (index + 1) + '</td><td><strong>' + pegawai.nama + '</strong><br><small class="text-muted">' + pegawai.nip + '</small></td><td><select class="form-select form-select-sm mx-auto" style="max-width: 250px;" id="select-v-' + safeNip + '">' + options + '</select></td><td><button class="btn btn-sm btn-success fw-bold rounded-pill px-3 shadow-sm" onclick="simpanMapping(\'' + safeNip + '\', \'' + pegawai.nip + '\', this)"><i class="fas fa-save me-1"></i> Simpan</button></td></tr>';
-          }); tbody.innerHTML = rows;
-        })
-        .catch(err => document.getElementById('tabelMappingVerifikator').innerHTML = '<tr><td colspan="4" class="text-danger py-4">Gagal memuat.</td></tr>');
-    }
-
-    function simpanMapping(safeNip, realNip, btnEl) { 
-      const verifikator = document.getElementById('select-v-' + safeNip).value; 
-      if (verifikator === "-") { tampilkanNotifikasi("Silakan pilih verifikator terlebih dahulu!", "danger"); return; } 
-      const originalText = btnEl.innerHTML; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btnEl.disabled = true; 
-      
-      apiCall('updatePegawaiVerifikator', { nip: realNip, namaVerifikator: verifikator })
-        .then(function(res) { tampilkanNotifikasi(res, "success"); btnEl.innerHTML = originalText; btnEl.disabled = false; })
-        .catch(function(err) { tampilkanNotifikasi("Gagal menyimpan.", "danger"); btnEl.innerHTML = originalText; btnEl.disabled = false; });
-    }
-
-    // --- ABSENSI LIVE SCANNER (MURNI JS) ---
+    // --- ABSENSI LIVE SCANNER ---
     function renderAbsensi() {
+      const date = new Date();
+      const currMonth = date.getMonth() + 1;
+      const currYear = date.getFullYear();
       const bulanList = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-      let h = '...'; // (Header sama)
-  
-      h += '<div class="card border-0 shadow-sm mb-3 rounded-4"><div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2"><div class="d-flex gap-2 align-items-center"><span class="fw-bold me-1">Riwayat:</span>';
-  
-      // Dropdown Bulan Dinamis
-      h += '<select class="form-select form-select-sm w-auto" id="absenBulan">';
-      bulanList.forEach((b, i) => {
-      let val = (i+1).toString().padStart(2, '0');
-      h += `<option value="${val}" ${(i === 4) ? 'selected' : ''}>${b}</option>`;
-      });
-      h += '</select>';
 
-      // Dropdown Tahun Dinamis
-      h += '<select class="form-select form-select-sm w-auto" id="absenTahun"><option value="2025">2025</option><option value="2026" selected>2026</option></select>';
-  
-      h += '<button class="btn btn-sm btn-primary" onclick="muatRiwayatAbsensi()">Tampilkan</button></div>...';
       let h = '<h4 class="fw-bold mb-4 text-dark"><i class="fas fa-fingerprint text-success me-2"></i>Sistem Absensi GPS</h4>';
       h += '<div class="row mb-4"><div class="col-md-6"><div class="card shadow-sm border-0 bg-success text-white rounded-4"><div class="card-body text-center p-4"><h5 class="fw-bold mb-3"><i class="fas fa-sign-in-alt me-2"></i>Absen Masuk</h5><button class="btn btn-light fw-bold text-success w-100 py-3 rounded-pill" onclick="bukaScannerGPS(\'Masuk\')"><i class="fas fa-camera me-2"></i> BUKA KAMERA</button></div></div></div>';
       h += '<div class="col-md-6 mt-3 mt-md-0"><div class="card shadow-sm border-0 bg-danger text-white rounded-4"><div class="card-body text-center p-4"><h5 class="fw-bold mb-3"><i class="fas fa-sign-out-alt me-2"></i>Absen Pulang</h5><button class="btn btn-light fw-bold text-danger w-100 py-3 rounded-pill" onclick="bukaScannerGPS(\'Pulang\')"><i class="fas fa-camera me-2"></i> BUKA KAMERA</button></div></div></div></div>';
-      h += '<div class="card border-0 shadow-sm mb-3 rounded-4"><div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2"><div class="d-flex gap-2 align-items-center"><span class="fw-bold me-1">Riwayat:</span><select class="form-select form-select-sm w-auto" id="absenBulan"><option value="05" selected>Mei</option></select><select class="form-select form-select-sm w-auto" id="absenTahun"><option value="2026" selected>2026</option></select><button class="btn btn-sm btn-primary" onclick="muatRiwayatAbsensi()">Tampilkan</button></div><button class="btn btn-sm btn-danger fw-bold" id="btnCetakAbsen" onclick="downloadPDFAbsensi()"><i class="fas fa-file-pdf me-1"></i> CETAK REKAP</button></div></div>';
+      
+      h += '<div class="card border-0 shadow-sm mb-3 rounded-4"><div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2"><div class="d-flex gap-2 align-items-center"><span class="fw-bold me-1">Riwayat:</span>';
+      
+      // Filter Bulan Dinamis
+      h += '<select class="form-select form-select-sm w-auto" id="absenBulan">';
+      bulanList.forEach((b, i) => { 
+        let val = (i+1).toString().padStart(2, '0');
+        h += `<option value="${val}" ${currMonth === i+1 ? 'selected' : ''}>${b}</option>`; 
+      });
+      h += '</select>';
+
+      // Filter Tahun Dinamis
+      h += '<select class="form-select form-select-sm w-auto" id="absenTahun">';
+      [2024, 2025, 2026].forEach(y => { h += `<option value="${y}" ${currYear === y ? 'selected' : ''}>${y}</option>`; });
+      h += '</select>';
+
+      h += '<button class="btn btn-sm btn-primary" onclick="muatRiwayatAbsensi()">Tampilkan</button></div><button class="btn btn-sm btn-danger fw-bold" id="btnCetakAbsen" onclick="downloadPDFAbsensi()"><i class="fas fa-file-pdf me-1"></i> CETAK REKAP</button></div></div>';
+      
       h += '<div class="card border-0 shadow-sm rounded-4 overflow-hidden"><div class="card-body p-0"><div class="table-responsive"><table class="table table-bordered table-hover mb-0 text-center"><thead class="table-light"><tr><th>No</th><th>Tanggal</th><th>Jenis</th><th>Waktu</th><th>Lokasi Validasi</th></tr></thead><tbody id="tabelRiwayatAbsen"><tr><td colspan="5" class="py-4"><i class="fas fa-spinner fa-spin"></i> Memuat data absensi...</td></tr></tbody></table></div></div></div>';
       
       h += '<div class="modal fade" id="modalScanner" data-bs-backdrop="static" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-0 bg-light"><h5 class="modal-title fw-bold" id="modalScannerTitle">Verifikasi Lokasi & Barcode</h5><button type="button" class="btn-close" data-bs-dismiss="modal" onclick="hentikanKamera()"></button></div>';
       h += '<div class="modal-body text-center p-4"><div id="statusLokasi" class="alert alert-info small fw-bold"><i class="fas fa-spinner fa-spin"></i> Memeriksa koordinat GPS...</div>';
-      
       h += '<div id="areaScannerLive" style="display: none; margin-top: 15px;">';
       h += '<p class="text-muted small mb-2 fw-bold"><i class="fas fa-camera me-1"></i> Arahkan kamera ke Barcode</p>';
       h += '<div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; border: 3px solid #198754;"></div>';
@@ -686,14 +609,17 @@
       const tbody = document.getElementById('tabelRiwayatAbsen'); 
       tbody.innerHTML = '<tr><td colspan="5" class="py-4"><i class="fas fa-spinner fa-spin"></i> Memuat data absensi...</td></tr>';
       
-      apiCall('getAbsensiData', { userNip: currentUser.nip })
+      const bln = document.getElementById('absenBulan').value;
+      const thn = document.getElementById('absenTahun').value;
+
+      apiCall('getAbsensiData', { userNip: currentUser.nip, bulan: bln, tahun: thn })
         .then(function(data) {
           if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted py-4">Belum ada riwayat absensi.</td></tr>'; return; }
           let rows = '';
           data.forEach((row, index) => { let badgeClass = row.jenis === 'Masuk' ? 'bg-success' : 'bg-danger'; rows += '<tr><td>' + (index + 1) + '</td><td class="fw-bold">' + row.tanggal + '</td><td><span class="badge ' + badgeClass + ' px-3 py-2 rounded-pill">' + row.jenis + '</span></td><td class="fw-bold text-dark">' + row.waktu + '</td><td class="small text-muted">' + row.statusJarak + '</td></tr>'; });
           tbody.innerHTML = rows;
         })
-        .catch(err => tbody.innerHTML = '<tr><td colspan="5">Gagal memuat</td></tr>');
+        .catch(err => tbody.innerHTML = '<tr><td colspan="5" class="text-danger">Gagal memuat</td></tr>');
     }
 
     function hitungJarakMeter(lat1, lon1, lat2, lon2) {
@@ -790,7 +716,6 @@
       document.getElementById('content-area').innerHTML = h;
     }
 
-    // Fungsi untuk compress gambar (resize) sebelum dikirim
     function previewDanUploadFoto(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0]; 
@@ -828,7 +753,6 @@
       }
     }
 
-    // Fungsi Simpan Profil menggunakan API fetch
     function updateProfilPegawai(btn) { 
       const data = { 
         nip: currentUser.nip, 
@@ -843,20 +767,15 @@
       const originalText = btn.innerHTML; 
       btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...';
       
-      // Memanggil fungsi updateUserProfil di Backend (Code.gs)
       apiCall('updateUserProfil', { obj: data })
         .then(function(res) { 
           if (res === "Sukses") { 
             tampilkanNotifikasi("Profil berhasil diperbarui!", "success"); 
-            
-            // Update data session lokal agar tidak hilang saat di-refresh
             currentUser.nama = data.nama; 
             currentUser.jabatan = data.jabatan; 
             currentUser.unitKerja = data.unit; 
             if(data.foto) currentUser.foto = data.foto; 
-            
             localStorage.setItem('sim_blud_session', JSON.stringify(currentUser));
-            
             showMainApp(); 
             renderProfil(); 
           } else { 
@@ -866,10 +785,131 @@
           } 
         })
         .catch(function(err) { 
-          tampilkanNotifikasi("Terjadi kesalahan server saat menyimpan profil.", "danger"); 
+          tampilkanNotifikasi("Terjadi kesalahan server.", "danger"); 
           btn.disabled = false; 
           btn.innerHTML = originalText; 
         });
+    }
+
+    // --- FUNGSI VERIFIKASI LKH ---
+    function renderVerifikasiLKH() {
+      if (currentUser.role !== 'Admin' && currentUser.role !== 'Verifikator') { 
+        document.getElementById('content-area').innerHTML = '<div class="alert alert-danger shadow-sm border-0"><i class="fas fa-exclamation-triangle me-2"></i> <strong>Akses Ditolak!</strong></div>'; 
+        return; 
+      }
+
+      let h = '<h4 class="fw-bold mb-4 text-dark"><i class="fas fa-check-double text-success me-2"></i>Verifikasi LKH Pegawai</h4>';
+      h += '<div class="table-responsive bg-white shadow-sm rounded-4 border border-light">';
+      h += '<table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.85rem;">';
+      h += '<thead class="table-light text-center"><tr><th width="5%">No</th><th width="15%">Nama Pegawai</th><th width="15%">Hari/Tanggal/Jam</th><th>Rincian Kegiatan</th><th>Hasil Kegiatan</th><th width="10%">Aksi</th></tr></thead>';
+      h += '<tbody id="tabelVerifikasi"><tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-success"></div><br>Mencari data...</td></tr></tbody></table></div>';
+      document.getElementById('content-area').innerHTML = h;
+
+      apiCall('getPendingLKH', { userRole: currentUser.role, userNama: currentUser.nama })
+        .then(function(data) {
+          const tbody = document.getElementById('tabelVerifikasi');
+          if (!data || data.length === 0) { 
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Semua LKH sudah diverifikasi.</td></tr>'; 
+            return; 
+          }
+          let rows = ''; 
+          data.forEach((row, index) => { 
+            rows += '<tr><td class="text-center">' + (index + 1) + '</td><td class="fw-bold text-dark">' + row.namaPegawai + '</td><td class="text-center">' + row.tanggal + '<br><span class="badge bg-light text-dark border">' + row.waktu + '</span></td><td>' + row.kegiatan + '</td><td>' + row.hasil + '</td><td class="text-center"><button class="btn btn-success btn-sm fw-bold shadow-sm rounded-pill px-3" onclick="eksekusiVerifikasi(' + row.rowIdx + ', this)"><i class="fas fa-check me-1"></i> Verifikasi</button></td></tr>'; 
+          }); 
+          tbody.innerHTML = rows;
+        })
+        .catch(function(err) { document.getElementById('tabelVerifikasi').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Gagal memuat data verifikasi.</td></tr>'; });
+    }
+
+    function eksekusiVerifikasi(rowIdx, btn) { 
+      tampilkanKonfirmasi("Apakah Anda yakin ingin memverifikasi laporan ini?", function() {
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
+        apiCall('updateStatusVerifikasi', { rowIdx: rowIdx, userRole: currentUser.role, userNama: currentUser.nama })
+          .then(function(res) { tampilkanNotifikasi(res, "success"); renderVerifikasiLKH(); })
+          .catch(function(err) { tampilkanNotifikasi(err.message || "Gagal verifikasi", "danger"); renderVerifikasiLKH(); });
+      });
+    }
+
+    // --- MANAJEMEN PEGAWAI ---
+    function renderPegawai() {
+      let h = '<div class="card border-0 shadow-sm rounded-4"><div class="card-header bg-white py-3 d-flex justify-content-between align-items-center"><h6 class="mb-0 fw-bold text-success"><i class="fas fa-users me-2"></i>Manajemen Data Pegawai</h6><button class="btn btn-success btn-sm rounded-pill fw-bold px-3" onclick="tambahPegawaiBaru()"><i class="fas fa-plus me-1"></i> Tambah Pegawai</button></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.85rem;"><thead class="table-light"><tr><th>No</th><th>NIP</th><th>Nama Pegawai</th><th>Role</th><th>Jabatan</th><th>Unit Kerja</th><th>Jenis Profesi</th></tr></thead><tbody id="tabelPegawai"><tr><td colspan="7" class="py-4"><div class="spinner-border text-success"></div> Memuat data...</td></tr></tbody></table></div></div></div>';
+      document.getElementById('content-area').innerHTML = h;
+      
+      apiCall('getAllPegawai', {})
+        .then(function(data) { 
+          let rows = ''; 
+          data.forEach((p, i) => { 
+            let badgeProfesi = p.jenisProfesi === 'Tenaga Medis' ? 'bg-info text-dark' : 'bg-warning text-dark';
+            rows += '<tr><td>' + (i+1) + '</td><td>' + p.nip + '</td><td class="text-start fw-bold">' + p.nama + '</td><td><span class="badge bg-secondary rounded-pill px-2 py-1">' + p.role + '</span></td><td>' + p.jabatan + '</td><td>' + p.unit + '</td><td><span class="badge ' + badgeProfesi + ' rounded-pill px-2 py-1">' + p.jenisProfesi + '</span></td></tr>'; 
+          }); 
+          document.getElementById('tabelPegawai').innerHTML = rows; 
+        })
+        .catch(err => document.getElementById('tabelPegawai').innerHTML = '<tr><td colspan="7" class="text-danger">Gagal memuat data.</td></tr>');
+    }
+
+    function tambahPegawaiBaru() {
+      document.getElementById('p_nip').value = ''; document.getElementById('p_nama').value = '';
+      document.getElementById('p_pass').value = '123456'; document.getElementById('p_jabatan').value = '';
+      document.getElementById('p_unit').value = '';
+      new bootstrap.Modal(document.getElementById('modalPegawai')).show();
+    }
+
+    function simpanPegawai() {
+      const btn = document.querySelector('#modalPegawai .btn-success');
+      const txtAsli = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...';
+      btn.disabled = true;
+
+      const dataPegawai = {
+        nip: document.getElementById('p_nip').value,
+        pass: document.getElementById('p_pass').value,
+        nama: document.getElementById('p_nama').value,
+        role: document.getElementById('p_role').value,
+        jenisProfesi: document.getElementById('p_jenis_profesi').value,
+        jabatan: document.getElementById('p_jabatan').value,
+        unit: document.getElementById('p_unit').value
+      };
+
+      apiCall('simpanDataPegawai', { data: dataPegawai })
+        .then(function(res) {
+           tampilkanNotifikasi(res, "success");
+           bootstrap.Modal.getInstance(document.getElementById('modalPegawai')).hide();
+           renderPegawai(); 
+        })
+        .catch(function(err) {
+           tampilkanNotifikasi("Gagal menyimpan: " + err.message, "danger");
+        })
+        .finally(function() { btn.innerHTML = txtAsli; btn.disabled = false; });
+    }
+
+    // --- PENGATURAN VERIFIKATOR ---
+    function renderVerifikator() {
+      let h = '<div class="card border-0 shadow-sm rounded-4 overflow-hidden"><div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold text-success"><i class="fas fa-link me-2"></i>Mapping Verifikator Pegawai</h6></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-bordered table-hover align-middle mb-0 table-custom text-center"><thead class="table-light"><tr><th width="5%">No</th><th width="35%">Nama Pegawai (NIP)</th><th width="40%">Pilih Verifikator</th><th width="20%">Aksi</th></tr></thead><tbody id="tabelMappingVerifikator"><tr><td colspan="4" class="py-4"><div class="spinner-border text-success"></div> Memuat Data Master...</td></tr></tbody></table></div></div></div>';
+      document.getElementById('content-area').innerHTML = h;
+
+      apiCall('getDataMasterVerifikator', {})
+        .then(function(data) {
+          const tbody = document.getElementById('tabelMappingVerifikator');
+          if (!data.pegawai || data.pegawai.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-muted py-4">Belum ada data.</td></tr>'; return; }
+          let rows = '';
+          data.pegawai.forEach((pegawai, index) => {
+            let options = '<option value="-">-- Belum Ada Verifikator --</option>'; 
+            data.verifikator.forEach(v => { let selected = (v === pegawai.verifikator) ? 'selected' : ''; options += '<option value="' + v + '" ' + selected + '>' + v + '</option>'; });
+            let safeNip = pegawai.nip.replace(/\s+/g, ''); 
+            rows += '<tr><td>' + (index + 1) + '</td><td><strong>' + pegawai.nama + '</strong><br><small class="text-muted">' + pegawai.nip + '</small></td><td><select class="form-select form-select-sm mx-auto" style="max-width: 250px;" id="select-v-' + safeNip + '">' + options + '</select></td><td><button class="btn btn-sm btn-success fw-bold rounded-pill px-3 shadow-sm" onclick="simpanMapping(\'' + safeNip + '\', \'' + pegawai.nip + '\', this)"><i class="fas fa-save me-1"></i> Simpan</button></td></tr>';
+          }); tbody.innerHTML = rows;
+        })
+        .catch(err => document.getElementById('tabelMappingVerifikator').innerHTML = '<tr><td colspan="4" class="text-danger py-4">Gagal memuat.</td></tr>');
+    }
+
+    function simpanMapping(safeNip, realNip, btnEl) { 
+      const verifikator = document.getElementById('select-v-' + safeNip).value; 
+      if (verifikator === "-") { tampilkanNotifikasi("Silakan pilih verifikator terlebih dahulu!", "danger"); return; } 
+      const originalText = btnEl.innerHTML; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btnEl.disabled = true; 
+      
+      apiCall('updatePegawaiVerifikator', { nip: realNip, namaVerifikator: verifikator })
+        .then(function(res) { tampilkanNotifikasi(res, "success"); btnEl.innerHTML = originalText; btnEl.disabled = false; })
+        .catch(function(err) { tampilkanNotifikasi("Gagal menyimpan.", "danger"); btnEl.innerHTML = originalText; btnEl.disabled = false; });
     }
 
     // --- CETAK PDF ---
@@ -936,11 +976,6 @@
         }
       }).catch(err => container.innerHTML = '<div class="alert alert-danger mx-auto">Gagal load preview</div>');
     }
-
-    // --- FUNGSI ADMIN / VERIFIKATOR / MASTER DATA DENGAN API FETCH SAMA ---
-    // (Bisa dilanjutkan dengan format yang sama: renderVerifikasiLKH, renderPegawai, renderVerifikator dll menggunakan apiCall)
-    // Sisa fungsi Admin/Profil menggunakan pola yang sama (seperti apiCall('getDataMasterVerifikator'), apiCall('getAllPegawai'), dll).
-
   </script>
 </body>
 </html>
