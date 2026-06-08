@@ -449,7 +449,32 @@
       const thn = document.getElementById('filterLKH_Tahun').value;
 
       apiCall('getLKHData', { userNip: currentUser.nip, bulan: bln, tahun: thn })
-        .then(function(data) {
+        .then(function(allData) {
+          // --- FILTER DATA LOKAL BERDASARKAN BULAN DAN TAHUN ---
+          let data = allData;
+          if (allData && allData.length > 0) {
+            const bulanNama = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+            const namaBulanCari = bulanNama[parseInt(bln) - 1];
+            const angkaBulanCari = bln.toString().padStart(2, '0');
+            
+            data = allData.filter(row => {
+              if (!row.tanggal) return true;
+              const tglStr = row.tanggal.toString().toLowerCase();
+              
+              // Cek Format Baku (Contoh: YYYY-MM-DD)
+              const parsed = new Date(row.tanggal);
+              if (!isNaN(parsed) && tglStr.includes('-') && !tglStr.includes(namaBulanCari)) {
+                return (parsed.getMonth() + 1) == parseInt(bln) && parsed.getFullYear() == parseInt(thn);
+              }
+              
+              // Cek Format Teks Indonesia (Contoh: 12 Mei 2026 atau 12/05/2026)
+              const adaTahun = tglStr.includes(thn.toString());
+              const adaBulan = tglStr.includes(namaBulanCari) || tglStr.includes('/' + angkaBulanCari + '/') || tglStr.includes('-' + angkaBulanCari + '-');
+              return adaTahun && adaBulan;
+            });
+          }
+          // -----------------------------------------------------
+
           window.currentLKHData = data; 
           if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Belum ada data LKH pada periode ini.</td></tr>'; return; }
           let rows = '';
@@ -613,13 +638,41 @@
       const thn = document.getElementById('absenTahun').value;
 
       apiCall('getAbsensiData', { userNip: currentUser.nip, bulan: bln, tahun: thn })
-        .then(function(data) {
-          if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted py-4">Belum ada riwayat absensi.</td></tr>'; return; }
+        .then(function(allData) {
+          // --- FILTER DATA LOKAL BERDASARKAN BULAN DAN TAHUN ---
+          let data = allData;
+          if (allData && allData.length > 0) {
+            const bulanNama = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+            const namaBulanCari = bulanNama[parseInt(bln) - 1];
+            const angkaBulanCari = bln.toString().padStart(2, '0');
+            
+            data = allData.filter(row => {
+              if (!row.tanggal) return true;
+              const tglStr = row.tanggal.toString().toLowerCase();
+              
+              // Cek Format Baku (Contoh: YYYY-MM-DD)
+              const parsed = new Date(row.tanggal);
+              if (!isNaN(parsed) && tglStr.includes('-') && !tglStr.includes(namaBulanCari)) {
+                return (parsed.getMonth() + 1) == parseInt(bln) && parsed.getFullYear() == parseInt(thn);
+              }
+              
+              // Cek Format Teks Indonesia
+              const adaTahun = tglStr.includes(thn.toString());
+              const adaBulan = tglStr.includes(namaBulanCari) || tglStr.includes('/' + angkaBulanCari + '/') || tglStr.includes('-' + angkaBulanCari + '-');
+              return adaTahun && adaBulan;
+            });
+          }
+          // -----------------------------------------------------
+
+          if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted py-4">Belum ada riwayat absensi pada periode ini.</td></tr>'; return; }
           let rows = '';
-          data.forEach((row, index) => { let badgeClass = row.jenis === 'Masuk' ? 'bg-success' : 'bg-danger'; rows += '<tr><td>' + (index + 1) + '</td><td class="fw-bold">' + row.tanggal + '</td><td><span class="badge ' + badgeClass + ' px-3 py-2 rounded-pill">' + row.jenis + '</span></td><td class="fw-bold text-dark">' + row.waktu + '</td><td class="small text-muted">' + row.statusJarak + '</td></tr>'; });
+          data.forEach((row, index) => { 
+            let badgeClass = row.jenis === 'Masuk' ? 'bg-success' : 'bg-danger'; 
+            rows += '<tr><td>' + (index + 1) + '</td><td class="fw-bold">' + row.tanggal + '</td><td><span class="badge ' + badgeClass + ' px-3 py-2 rounded-pill">' + row.jenis + '</span></td><td class="fw-bold text-dark">' + row.waktu + '</td><td class="small text-muted">' + row.statusJarak + '</td></tr>'; 
+          });
           tbody.innerHTML = rows;
         })
-        .catch(err => tbody.innerHTML = '<tr><td colspan="5" class="text-danger">Gagal memuat</td></tr>');
+        .catch(err => tbody.innerHTML = '<tr><td colspan="5" class="text-danger py-4">Gagal memuat data</td></tr>');
     }
 
     function hitungJarakMeter(lat1, lon1, lat2, lon2) {
