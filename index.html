@@ -450,27 +450,41 @@
 
       apiCall('getLKHData', { userNip: currentUser.nip, bulan: bln, tahun: thn })
         .then(function(allData) {
-          // --- FILTER DATA LOKAL BERDASARKAN BULAN DAN TAHUN ---
+          // --- FILTER DATA LOKAL (MENDUKUNG FORMAT DD/MM/YYYY) ---
           let data = allData;
           if (allData && allData.length > 0) {
-            const bulanNama = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
-            const namaBulanCari = bulanNama[parseInt(bln) - 1];
-            const angkaBulanCari = bln.toString().padStart(2, '0');
+            let targetBulan = parseInt(bln);
+            let targetTahun = parseInt(thn);
             
             data = allData.filter(row => {
               if (!row.tanggal) return true;
-              const tglStr = row.tanggal.toString().toLowerCase();
+              let tglStr = row.tanggal.toString().toLowerCase().trim();
+              let dateOnly = tglStr.split(' ')[0]; // Ambil bagian tanggal saja, abaikan jam jika ada
               
-              // Cek Format Baku (Contoh: YYYY-MM-DD)
-              const parsed = new Date(row.tanggal);
-              if (!isNaN(parsed) && tglStr.includes('-') && !tglStr.includes(namaBulanCari)) {
-                return (parsed.getMonth() + 1) == parseInt(bln) && parsed.getFullYear() == parseInt(thn);
+              // Jika format menggunakan garis miring (tanggal/bulan/tahun)
+              if (dateOnly.includes('/')) {
+                let parts = dateOnly.split('/');
+                if (parts.length >= 3) {
+                  let m = parseInt(parts[1], 10);
+                  let y = parseInt(parts[2], 10);
+                  if (!isNaN(m) && !isNaN(y)) return (m === targetBulan && y === targetTahun);
+                }
               }
               
-              // Cek Format Teks Indonesia (Contoh: 12 Mei 2026 atau 12/05/2026)
-              const adaTahun = tglStr.includes(thn.toString());
-              const adaBulan = tglStr.includes(namaBulanCari) || tglStr.includes('/' + angkaBulanCari + '/') || tglStr.includes('-' + angkaBulanCari + '-');
-              return adaTahun && adaBulan;
+              // Jika format menggunakan strip (YYYY-MM-DD atau DD-MM-YYYY)
+              if (dateOnly.includes('-')) {
+                let parts = dateOnly.split('-');
+                if (parts.length >= 3) {
+                  let y = parseInt(parts[0], 10) > 2000 ? parseInt(parts[0], 10) : parseInt(parts[2], 10);
+                  let m = parseInt(parts[1], 10);
+                  if (!isNaN(m) && !isNaN(y)) return (m === targetBulan && y === targetTahun);
+                }
+              }
+              
+              // Jika format menggunakan teks (Contoh: "12 Juni 2026")
+              const bulanNama = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+              const namaBulanCari = bulanNama[targetBulan - 1];
+              return tglStr.includes(targetTahun.toString()) && tglStr.includes(namaBulanCari);
             });
           }
           // -----------------------------------------------------
